@@ -286,6 +286,19 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary); }
 .event-badge.past { background: rgba(224, 86, 63, 0.85); }
 .event-badge.upcoming { background: rgba(35, 178, 109, 0.85); }
 
+.price-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff;
+}
+.price-badge.free { background: rgba(35, 178, 109, 0.85); }
+.price-badge.paid { background: rgba(108, 92, 231, 0.9); }
+
 .event-body {
   padding: 16px;
   display: flex;
@@ -444,6 +457,29 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary); }
   gap: 10px;
   margin-top: 10px;
 }
+
+/* Demo checkout modal */
+.demo-banner {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  margin: 0 0 16px;
+}
+
+.pay-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface-2);
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+.pay-summary strong { color: var(--primary); font-size: 1.05rem; }
 
 /* Details modal content */
 .details-row {
