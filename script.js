@@ -224,7 +224,7 @@ function renderEvents(list) {
           <button class="btn btn-ghost btn-sm" data-action="view" data-id="${ev.id}">View</button>
           ${
             !isPast
-              ? `<button class="btn btn-primary btn-sm" data-action="rsvp" data-id="${ev.id}" ${isFull ? "disabled" : ""}>${isFull ? "Full" : "RSVP"}</button>`
+              ? `<button class="btn btn-primary btn-sm" data-action="rsvp" data-id="${ev.id}" ${isFull ? "disabled" : ""}>${isFull ? "Full" : "Join Event"}</button>`
               : ""
           }
           <button class="btn btn-ghost btn-sm" data-action="edit" data-id="${ev.id}">Edit</button>
@@ -275,7 +275,7 @@ function rsvpToEvent(id) {
   ev.attendees = Number(ev.attendees || 0) + 1;
   saveEvents();
   render();
-  showToast(`RSVP confirmed for "${ev.title}"!`, "success");
+  showToast(`You're confirmed for "${ev.title}"!`, "success");
 }
 
 /* =========================================================
