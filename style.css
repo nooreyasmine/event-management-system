@@ -354,13 +354,17 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary); }
   position: fixed;
   inset: 0;
   background: rgba(10, 10, 20, 0.5);
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   z-index: 100;
   padding: 20px;
   backdrop-filter: blur(2px);
   animation: fadeIn 0.15s ease;
+}
+
+.modal-overlay:not([hidden]) {
+  display: flex;
 }
 
 .modal {
