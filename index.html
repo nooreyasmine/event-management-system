@@ -132,6 +132,21 @@
 
         <div class="field-row">
           <label class="field">
+            <span>Event Type</span>
+            <select id="eventType">
+              <option value="free">Free</option>
+              <option value="paid">Paid</option>
+            </select>
+          </label>
+          <label class="field" id="priceField" hidden>
+            <span>Price (₹) <em>*</em></span>
+            <input type="number" id="price" min="1" step="1" placeholder="e.g. 499" />
+            <small class="error-text" id="err-price"></small>
+          </label>
+        </div>
+
+        <div class="field-row">
+          <label class="field">
             <span>Date <em>*</em></span>
             <input type="date" id="date" required />
             <small class="error-text" id="err-date"></small>
@@ -192,6 +207,56 @@
           <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ===== DEMO PAYMENT / CHECKOUT MODAL ===== -->
+  <div id="paymentModal" class="modal-overlay" hidden>
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>Checkout</h2>
+        <button class="close-btn" id="closePaymentBtn" aria-label="Close">✕</button>
+      </div>
+      <form class="modal-body" id="paymentForm" novalidate>
+        <p class="demo-banner">🧪 Demo checkout — no real payment is processed.</p>
+
+        <div class="pay-summary">
+          <span id="paySummaryTitle">Event title</span>
+          <strong id="paySummaryAmount">₹0</strong>
+        </div>
+
+        <label class="field">
+          <span>Name on Card <em>*</em></span>
+          <input type="text" id="payName" required placeholder="e.g. Yasmine Noor" />
+          <small class="error-text" id="err-payName"></small>
+        </label>
+
+        <label class="field">
+          <span>Card Number <em>*</em></span>
+          <input type="text" id="payCard" required maxlength="19" placeholder="1234 5678 9012 3456" />
+          <small class="error-text" id="err-payCard"></small>
+        </label>
+
+        <div class="field-row">
+          <label class="field">
+            <span>Expiry (MM/YY) <em>*</em></span>
+            <input type="text" id="payExpiry" required maxlength="5" placeholder="MM/YY" />
+            <small class="error-text" id="err-payExpiry"></small>
+          </label>
+          <label class="field">
+            <span>CVV <em>*</em></span>
+            <input type="text" id="payCvv" required maxlength="3" placeholder="123" />
+            <small class="error-text" id="err-payCvv"></small>
+          </label>
+        </div>
+
+        <input type="hidden" id="payEventId" />
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="cancelPaymentBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="payNowBtn">Pay &amp; Join</button>
+        </div>
+      </form>
     </div>
   </div>
 
