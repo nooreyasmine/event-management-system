@@ -45,6 +45,18 @@ const closeConfirmBtn = document.getElementById("closeConfirmBtn");
 const cancelDeleteBtn = document.getElementById("cancelDeleteBtn");
 const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
 
+const eventTypeSelect = document.getElementById("eventType");
+const priceField = document.getElementById("priceField");
+const priceInput = document.getElementById("price");
+
+const paymentModal = document.getElementById("paymentModal");
+const paymentForm = document.getElementById("paymentForm");
+const paySummaryTitle = document.getElementById("paySummaryTitle");
+const paySummaryAmount = document.getElementById("paySummaryAmount");
+const payEventId = document.getElementById("payEventId");
+const closePaymentBtn = document.getElementById("closePaymentBtn");
+const cancelPaymentBtn = document.getElementById("cancelPaymentBtn");
+
 const themeToggle = document.getElementById("themeToggle");
 const exportBtn = document.getElementById("exportBtn");
 const importInput = document.getElementById("importInput");
@@ -92,6 +104,8 @@ function seedEvents() {
       image: "",
       maxAttendees: 40,
       attendees: 18,
+      isPaid: false,
+      price: 0,
     },
     {
       id: crypto.randomUUID(),
@@ -104,6 +118,8 @@ function seedEvents() {
       image: "",
       maxAttendees: 100,
       attendees: 62,
+      isPaid: true,
+      price: 499,
     },
     {
       id: crypto.randomUUID(),
@@ -116,6 +132,8 @@ function seedEvents() {
       image: "",
       maxAttendees: 30,
       attendees: 30,
+      isPaid: false,
+      price: 0,
     },
   ];
 }
@@ -202,6 +220,7 @@ function renderEvents(list) {
       <div class="event-thumb" style="${ev.image ? `background-image:url('${escapeAttr(ev.image)}')` : ""}">
         ${!ev.image ? categoryEmoji(ev.category) : ""}
         <span class="event-badge ${isPast ? "past" : "upcoming"}">${isPast ? "Past" : "Upcoming"}</span>
+        <span class="price-badge ${ev.isPaid ? "paid" : "free"}">${ev.isPaid ? "₹" + Number(ev.price || 0).toLocaleString("en-IN") : "Free"}</span>
       </div>
       <div class="event-body">
         <span class="event-category">${escapeHtml(ev.category)}</span>
@@ -224,7 +243,7 @@ function renderEvents(list) {
           <button class="btn btn-ghost btn-sm" data-action="view" data-id="${ev.id}">View</button>
           ${
             !isPast
-              ? `<button class="btn btn-primary btn-sm" data-action="rsvp" data-id="${ev.id}" ${isFull ? "disabled" : ""}>${isFull ? "Full" : "Join Event"}</button>`
+              ? `<button class="btn btn-primary btn-sm" data-action="rsvp" data-id="${ev.id}" ${isFull ? "disabled" : ""}>${isFull ? "Full" : ev.isPaid ? "Buy Ticket · ₹" + Number(ev.price || 0).toLocaleString("en-IN") : "Join Event"}</button>`
               : ""
           }
           <button class="btn btn-ghost btn-sm" data-action="edit" data-id="${ev.id}">Edit</button>
@@ -272,6 +291,14 @@ function rsvpToEvent(id) {
     showToast("This event is already full.", "error");
     return;
   }
+  if (ev.isPaid) {
+    openPaymentModal(ev);
+    return;
+  }
+  confirmAttendance(ev);
+}
+
+function confirmAttendance(ev) {
   ev.attendees = Number(ev.attendees || 0) + 1;
   saveEvents();
   render();
@@ -299,9 +326,13 @@ function openForm(id = null) {
     document.getElementById("description").value = ev.description || "";
     document.getElementById("image").value = ev.image || "";
     document.getElementById("maxAttendees").value = ev.maxAttendees || "";
+    eventTypeSelect.value = ev.isPaid ? "paid" : "free";
+    priceInput.value = ev.isPaid ? ev.price || "" : "";
   } else {
     formTitle.textContent = "Create New Event";
+    eventTypeSelect.value = "free";
   }
+  togglePriceField();
   formModal.hidden = false;
   document.getElementById("title").focus();
 }
@@ -317,6 +348,14 @@ cancelFormBtn.addEventListener("click", closeForm);
 formModal.addEventListener("click", (e) => {
   if (e.target === formModal) closeForm();
 });
+
+function togglePriceField() {
+  const isPaid = eventTypeSelect.value === "paid";
+  priceField.hidden = !isPaid;
+  if (!isPaid) priceInput.value = "";
+}
+
+eventTypeSelect.addEventListener("change", togglePriceField);
 
 function clearErrors() {
   document.querySelectorAll(".error-text").forEach((el) => (el.textContent = ""));
@@ -346,6 +385,13 @@ function validateForm() {
     document.getElementById("err-location").textContent = "Location is required.";
     valid = false;
   }
+  if (eventTypeSelect.value === "paid") {
+    const price = Number(priceInput.value);
+    if (!price || price <= 0) {
+      document.getElementById("err-price").textContent = "Enter a valid price.";
+      valid = false;
+    }
+  }
   return valid;
 }
 
@@ -365,6 +411,8 @@ eventForm.addEventListener("submit", (e) => {
     maxAttendees: document.getElementById("maxAttendees").value
       ? Number(document.getElementById("maxAttendees").value)
       : null,
+    isPaid: eventTypeSelect.value === "paid",
+    price: eventTypeSelect.value === "paid" ? Number(priceInput.value) : 0,
   };
 
   if (id) {
@@ -396,6 +444,7 @@ function openDetails(id) {
   detailsBody.innerHTML = `
     ${ev.image ? `<div class="event-thumb" style="background-image:url('${escapeAttr(ev.image)}'); height:180px; border-radius: var(--radius-sm); margin-bottom: 14px;"></div>` : ""}
     <div class="details-row"><span class="details-label">Category</span><span>${escapeHtml(ev.category)}</span></div>
+    <div class="details-row"><span class="details-label">Price</span><span>${ev.isPaid ? "₹" + Number(ev.price || 0).toLocaleString("en-IN") : "Free"}</span></div>
     <div class="details-row"><span class="details-label">Date</span><span>${formatDate(ev.date)}</span></div>
     <div class="details-row"><span class="details-label">Time</span><span>${formatTime(ev.time)}</span></div>
     <div class="details-row"><span class="details-label">Location</span><span>${escapeHtml(ev.location)}</span></div>
@@ -437,6 +486,99 @@ confirmDeleteBtn.addEventListener("click", () => {
   closeConfirm();
   render();
   showToast("Event deleted.", "success");
+});
+
+/* =========================================================
+   DEMO PAYMENT / CHECKOUT (simulated — no real transaction)
+   ========================================================= */
+function openPaymentModal(ev) {
+  paymentForm.reset();
+  clearPaymentErrors();
+  payEventId.value = ev.id;
+  paySummaryTitle.textContent = ev.title;
+  paySummaryAmount.textContent = "₹" + Number(ev.price || 0).toLocaleString("en-IN");
+  paymentModal.hidden = false;
+  document.getElementById("payName").focus();
+}
+
+function closePaymentModal() {
+  paymentModal.hidden = true;
+}
+
+closePaymentBtn.addEventListener("click", closePaymentModal);
+cancelPaymentBtn.addEventListener("click", closePaymentModal);
+paymentModal.addEventListener("click", (e) => {
+  if (e.target === paymentModal) closePaymentModal();
+});
+
+function clearPaymentErrors() {
+  paymentForm.querySelectorAll(".error-text").forEach((el) => (el.textContent = ""));
+}
+
+// Auto-format card number as 1234 5678 9012 3456
+document.getElementById("payCard").addEventListener("input", (e) => {
+  let digits = e.target.value.replace(/\D/g, "").slice(0, 16);
+  e.target.value = digits.replace(/(.{4})/g, "$1 ").trim();
+});
+
+// Auto-format expiry as MM/YY
+document.getElementById("payExpiry").addEventListener("input", (e) => {
+  let digits = e.target.value.replace(/\D/g, "").slice(0, 4);
+  if (digits.length > 2) digits = digits.slice(0, 2) + "/" + digits.slice(2);
+  e.target.value = digits;
+});
+
+document.getElementById("payCvv").addEventListener("input", (e) => {
+  e.target.value = e.target.value.replace(/\D/g, "").slice(0, 3);
+});
+
+function validatePaymentForm() {
+  clearPaymentErrors();
+  let valid = true;
+
+  const name = document.getElementById("payName").value.trim();
+  const card = document.getElementById("payCard").value.replace(/\s/g, "");
+  const expiry = document.getElementById("payExpiry").value.trim();
+  const cvv = document.getElementById("payCvv").value.trim();
+
+  if (!name) {
+    document.getElementById("err-payName").textContent = "Name is required.";
+    valid = false;
+  }
+  if (!/^\d{16}$/.test(card)) {
+    document.getElementById("err-payCard").textContent = "Enter a 16-digit card number.";
+    valid = false;
+  }
+  if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiry)) {
+    document.getElementById("err-payExpiry").textContent = "Use MM/YY format.";
+    valid = false;
+  }
+  if (!/^\d{3}$/.test(cvv)) {
+    document.getElementById("err-payCvv").textContent = "Enter a 3-digit CVV.";
+    valid = false;
+  }
+  return valid;
+}
+
+paymentForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  if (!validatePaymentForm()) return;
+
+  const payBtn = document.getElementById("payNowBtn");
+  payBtn.disabled = true;
+  payBtn.textContent = "Processing…";
+
+  // Simulated processing delay — no real payment gateway is called.
+  setTimeout(() => {
+    const ev = events.find((x) => x.id === payEventId.value);
+    payBtn.disabled = false;
+    payBtn.textContent = "Pay & Join";
+    closePaymentModal();
+    if (ev) {
+      confirmAttendance(ev);
+      showToast(`Payment successful (demo) — ₹${Number(ev.price || 0).toLocaleString("en-IN")} for "${ev.title}".`, "success");
+    }
+  }, 900);
 });
 
 /* =========================================================
