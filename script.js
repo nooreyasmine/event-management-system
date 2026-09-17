@@ -99,8 +99,6 @@ const cancelSignupBtn = document.getElementById("cancelSignupBtn");
 const goToLogin = document.getElementById("goToLogin");
 
 const themeToggle = document.getElementById("themeToggle");
-const exportBtn = document.getElementById("exportBtn");
-const importInput = document.getElementById("importInput");
 const toastContainer = document.getElementById("toastContainer");
 
 /* =========================================================
@@ -998,47 +996,6 @@ function applyTheme(theme) {
 themeToggle.addEventListener("click", () => {
   const current = document.documentElement.getAttribute("data-theme");
   applyTheme(current === "dark" ? "light" : "dark");
-});
-
-/* =========================================================
-   IMPORT / EXPORT
-   ========================================================= */
-exportBtn.addEventListener("click", () => {
-  const blob = new Blob([JSON.stringify(events, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `eventhub-backup-${new Date().toISOString().split("T")[0]}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast("Events exported.", "success");
-});
-
-importInput.addEventListener("change", (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const imported = JSON.parse(reader.result);
-      if (!Array.isArray(imported)) throw new Error("Invalid format");
-      const existingIds = new Set(events.map((ev) => ev.id));
-      const merged = [...events];
-      imported.forEach((ev) => {
-        if (ev && ev.id && !existingIds.has(ev.id)) {
-          merged.push(ev);
-        }
-      });
-      events = merged;
-      saveEvents();
-      render();
-      showToast(`Imported ${imported.length} event(s).`, "success");
-    } catch (err) {
-      showToast("Import failed — invalid JSON file.", "error");
-    }
-  };
-  reader.readAsText(file);
-  importInput.value = "";
 });
 
 /* =========================================================
