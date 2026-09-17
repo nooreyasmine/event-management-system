@@ -359,6 +359,7 @@ function seedEvents() {
       date: inDays(14),
       time: "10:00",
       location: "Online — Zoom",
+      meetingLink: "https://zoom.us/j/1234567890",
       description: "Hands-on workshop covering React fundamentals: components, props, state, and hooks.",
       image: "",
       maxAttendees: 100,
@@ -494,6 +495,11 @@ function renderEvents(list) {
                 : `<button class="btn btn-primary btn-sm" data-action="rsvp" data-id="${ev.id}" ${isFull ? "disabled" : ""}>${isFull ? "Full" : ev.isPaid ? "Buy Ticket · ₹" + Number(ev.price || 0).toLocaleString("en-IN") : "Join Event"}</button>`
               : ""
           }
+          ${
+            !isPast && isRegistered && ev.meetingLink
+              ? `<a class="btn btn-primary btn-sm" href="${escapeAttr(ev.meetingLink)}" target="_blank" rel="noopener noreferrer">🔗 Join Meeting</a>`
+              : ""
+          }
           <button class="btn btn-ghost btn-sm" data-action="edit" data-id="${ev.id}">Edit</button>
           <button class="btn btn-danger btn-sm" data-action="delete" data-id="${ev.id}">Delete</button>
         </div>
@@ -583,6 +589,7 @@ function openForm(id = null) {
     document.getElementById("date").value = ev.date;
     document.getElementById("time").value = ev.time;
     document.getElementById("location").value = ev.location;
+    document.getElementById("meetingLink").value = ev.meetingLink || "";
     document.getElementById("description").value = ev.description || "";
     document.getElementById("image").value = ev.image || "";
     document.getElementById("maxAttendees").value = ev.maxAttendees || "";
@@ -645,6 +652,11 @@ function validateForm() {
     document.getElementById("err-location").textContent = "Location is required.";
     valid = false;
   }
+  const meetingLink = document.getElementById("meetingLink").value.trim();
+  if (meetingLink && !/^https?:\/\/.+/i.test(meetingLink)) {
+    document.getElementById("err-meetingLink").textContent = "Enter a valid link starting with http:// or https://";
+    valid = false;
+  }
   if (eventTypeSelect.value === "paid") {
     const price = Number(priceInput.value);
     if (!price || price <= 0) {
@@ -666,6 +678,7 @@ eventForm.addEventListener("submit", (e) => {
     date: document.getElementById("date").value,
     time: document.getElementById("time").value,
     location: document.getElementById("location").value.trim(),
+    meetingLink: document.getElementById("meetingLink").value.trim(),
     description: document.getElementById("description").value.trim(),
     image: document.getElementById("image").value.trim(),
     maxAttendees: document.getElementById("maxAttendees").value
@@ -741,6 +754,16 @@ function openDetails(id) {
   detailsTitle.textContent = ev.title;
   const now = new Date();
   const isPast = new Date(`${ev.date}T${ev.time || "00:00"}`) < now;
+  const isRegistered = currentUser && registrations.some((r) => r.eventId === ev.id && r.email === currentUser.email);
+
+  let meetingLinkRow = "";
+  if (ev.meetingLink) {
+    if (isRegistered) {
+      meetingLinkRow = `<div class="details-row"><span class="details-label">Meeting Link</span><span><a href="${escapeAttr(ev.meetingLink)}" target="_blank" rel="noopener noreferrer">${escapeHtml(ev.meetingLink)}</a></span></div>`;
+    } else if (!isPast) {
+      meetingLinkRow = `<div class="details-row"><span class="details-label">Meeting Link</span><span class="details-locked">🔒 Visible after you join</span></div>`;
+    }
+  }
 
   detailsBody.innerHTML = `
     ${ev.image ? `<div class="event-thumb" style="background-image:url('${escapeAttr(ev.image)}'); height:180px; border-radius: var(--radius-sm); margin-bottom: 14px;"></div>` : ""}
@@ -749,6 +772,7 @@ function openDetails(id) {
     <div class="details-row"><span class="details-label">Date</span><span>${formatDate(ev.date)}</span></div>
     <div class="details-row"><span class="details-label">Time</span><span>${formatTime(ev.time)}</span></div>
     <div class="details-row"><span class="details-label">Location</span><span>${escapeHtml(ev.location)}</span></div>
+    ${meetingLinkRow}
     <div class="details-row"><span class="details-label">Status</span><span>${isPast ? "Past event" : "Upcoming"}</span></div>
     <div class="details-row"><span class="details-label">Attendees</span><span>${ev.attendees || 0}${ev.maxAttendees ? " / " + ev.maxAttendees : ""}</span></div>
     ${ev.description ? `<div class="details-row"><span class="details-label">About</span><span>${escapeHtml(ev.description)}</span></div>` : ""}
