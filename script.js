@@ -6,10 +6,14 @@
 const STORAGE_KEY = "eventhub_events_v1";
 const THEME_KEY = "eventhub_theme_v1";
 const REG_KEY = "eventhub_registrations_v1";
+const USERS_KEY = "eventhub_users_v1";
+const SESSION_KEY = "eventhub_session_v1";
 
 /* ---------- State ---------- */
 let events = [];
-let registrations = []; // { eventId, name, joinedAt }
+let registrations = []; // { eventId, name, email, joinedAt }
+let users = []; // { name, email, password } — demo only, plain text, browser-local
+let currentUser = null; // { name, email } | null
 let currentView = "grid";
 let deleteTargetId = null;
 
@@ -75,6 +79,25 @@ const myPastTabBtn = document.getElementById("myPastTabBtn");
 const myUpcomingList = document.getElementById("myUpcomingList");
 const myPastList = document.getElementById("myPastList");
 
+const authButtons = document.getElementById("authButtons");
+const userMenu = document.getElementById("userMenu");
+const userNameDisplay = document.getElementById("userNameDisplay");
+const loginBtn = document.getElementById("loginBtn");
+const signupBtn = document.getElementById("signupBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+
+const loginModal = document.getElementById("loginModal");
+const loginForm = document.getElementById("loginForm");
+const closeLoginBtn = document.getElementById("closeLoginBtn");
+const cancelLoginBtn = document.getElementById("cancelLoginBtn");
+const goToSignup = document.getElementById("goToSignup");
+
+const signupModal = document.getElementById("signupModal");
+const signupForm = document.getElementById("signupForm");
+const closeSignupBtn = document.getElementById("closeSignupBtn");
+const cancelSignupBtn = document.getElementById("cancelSignupBtn");
+const goToLogin = document.getElementById("goToLogin");
+
 const themeToggle = document.getElementById("themeToggle");
 const exportBtn = document.getElementById("exportBtn");
 const importInput = document.getElementById("importInput");
@@ -121,16 +144,192 @@ function saveRegistrations() {
   }
 }
 
-function addRegistration(eventId, name) {
-  // Keep one registration per event for this browser — update name if re-joined.
-  const existing = registrations.find((r) => r.eventId === eventId);
+function addRegistration(eventId, name, email) {
+  // One registration per event per account — update name if re-joined.
+  const existing = registrations.find((r) => r.eventId === eventId && r.email === email);
   if (existing) {
     existing.name = name;
     existing.joinedAt = new Date().toISOString();
   } else {
-    registrations.push({ eventId, name, joinedAt: new Date().toISOString() });
+    registrations.push({ eventId, name, email, joinedAt: new Date().toISOString() });
   }
   saveRegistrations();
+}
+
+/* =========================================================
+   AUTH — demo signup/login (browser-local, no real backend)
+   ========================================================= */
+function loadUsers() {
+  try {
+    const raw = localStorage.getItem(USERS_KEY);
+    users = raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    console.error("Failed to load users:", e);
+    users = [];
+  }
+}
+
+function saveUsers() {
+  try {
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  } catch (e) {
+    console.error("Failed to save users:", e);
+  }
+}
+
+function loadSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    currentUser = raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    currentUser = null;
+  }
+}
+
+function saveSession(user) {
+  currentUser = user;
+  localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+}
+
+function clearSession() {
+  currentUser = null;
+  localStorage.removeItem(SESSION_KEY);
+}
+
+function updateAuthUI() {
+  if (currentUser) {
+    authButtons.hidden = true;
+    userMenu.hidden = false;
+    userNameDisplay.textContent = `👤 ${currentUser.name}`;
+  } else {
+    authButtons.hidden = false;
+    userMenu.hidden = true;
+  }
+}
+
+/* ----- Login modal ----- */
+function openLoginModal() {
+  loginForm.reset();
+  clearAuthErrors(loginForm);
+  loginModal.hidden = false;
+  document.getElementById("loginEmail").focus();
+}
+function closeLoginModal() {
+  loginModal.hidden = true;
+}
+loginBtn.addEventListener("click", openLoginModal);
+closeLoginBtn.addEventListener("click", closeLoginModal);
+cancelLoginBtn.addEventListener("click", closeLoginModal);
+loginModal.addEventListener("click", (e) => {
+  if (e.target === loginModal) closeLoginModal();
+});
+goToSignup.addEventListener("click", (e) => {
+  e.preventDefault();
+  closeLoginModal();
+  openSignupModal();
+});
+
+loginForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  clearAuthErrors(loginForm);
+  const email = document.getElementById("loginEmail").value.trim().toLowerCase();
+  const password = document.getElementById("loginPassword").value;
+  let valid = true;
+
+  if (!email) {
+    document.getElementById("err-loginEmail").textContent = "Email is required.";
+    valid = false;
+  }
+  if (!password) {
+    document.getElementById("err-loginPassword").textContent = "Password is required.";
+    valid = false;
+  }
+  if (!valid) return;
+
+  const user = users.find((u) => u.email === email);
+  if (!user || user.password !== password) {
+    document.getElementById("err-loginPassword").textContent = "Invalid email or password.";
+    return;
+  }
+
+  saveSession({ name: user.name, email: user.email });
+  updateAuthUI();
+  closeLoginModal();
+  render();
+  showToast(`Welcome back, ${user.name}!`, "success");
+});
+
+/* ----- Signup modal ----- */
+function openSignupModal() {
+  signupForm.reset();
+  clearAuthErrors(signupForm);
+  signupModal.hidden = false;
+  document.getElementById("signupName").focus();
+}
+function closeSignupModal() {
+  signupModal.hidden = true;
+}
+signupBtn.addEventListener("click", openSignupModal);
+closeSignupBtn.addEventListener("click", closeSignupModal);
+cancelSignupBtn.addEventListener("click", closeSignupModal);
+signupModal.addEventListener("click", (e) => {
+  if (e.target === signupModal) closeSignupModal();
+});
+goToLogin.addEventListener("click", (e) => {
+  e.preventDefault();
+  closeSignupModal();
+  openLoginModal();
+});
+
+signupForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  clearAuthErrors(signupForm);
+  const name = document.getElementById("signupName").value.trim();
+  const email = document.getElementById("signupEmail").value.trim().toLowerCase();
+  const password = document.getElementById("signupPassword").value;
+  const confirmPassword = document.getElementById("signupConfirmPassword").value;
+  let valid = true;
+
+  if (!name) {
+    document.getElementById("err-signupName").textContent = "Name is required.";
+    valid = false;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    document.getElementById("err-signupEmail").textContent = "Enter a valid email.";
+    valid = false;
+  } else if (users.some((u) => u.email === email)) {
+    document.getElementById("err-signupEmail").textContent = "An account with this email already exists.";
+    valid = false;
+  }
+  if (password.length < 6) {
+    document.getElementById("err-signupPassword").textContent = "Use at least 6 characters.";
+    valid = false;
+  }
+  if (confirmPassword !== password) {
+    document.getElementById("err-signupConfirmPassword").textContent = "Passwords don't match.";
+    valid = false;
+  }
+  if (!valid) return;
+
+  const user = { name, email, password };
+  users.push(user);
+  saveUsers();
+  saveSession({ name, email });
+  updateAuthUI();
+  closeSignupModal();
+  render();
+  showToast(`Account created — welcome, ${name}!`, "success");
+});
+
+logoutBtn.addEventListener("click", () => {
+  clearSession();
+  updateAuthUI();
+  render();
+  showToast("Logged out.", "success");
+});
+
+function clearAuthErrors(form) {
+  form.querySelectorAll(".error-text").forEach((el) => (el.textContent = ""));
 }
 
 function seedEvents() {
@@ -261,7 +460,7 @@ function renderEvents(list) {
       ? Math.min(100, Math.round((Number(ev.attendees || 0) / Number(ev.maxAttendees)) * 100))
       : 0;
     const isFull = ev.maxAttendees && Number(ev.attendees || 0) >= Number(ev.maxAttendees);
-    const isRegistered = registrations.some((r) => r.eventId === ev.id);
+    const isRegistered = currentUser && registrations.some((r) => r.eventId === ev.id && r.email === currentUser.email);
 
     const card = document.createElement("article");
     card.className = "event-card";
@@ -338,7 +537,12 @@ eventsContainer.addEventListener("click", (e) => {
 function rsvpToEvent(id) {
   const ev = events.find((x) => x.id === id);
   if (!ev) return;
-  if (registrations.some((r) => r.eventId === id)) {
+  if (!currentUser) {
+    showToast("Please log in to join events.", "error");
+    openLoginModal();
+    return;
+  }
+  if (registrations.some((r) => r.eventId === id && r.email === currentUser.email)) {
     showToast("You're already attending this event.", "success");
     return;
   }
@@ -356,7 +560,7 @@ function rsvpToEvent(id) {
 function confirmAttendance(ev, name, opts = {}) {
   ev.attendees = Number(ev.attendees || 0) + 1;
   saveEvents();
-  if (name) addRegistration(ev.id, name);
+  if (name && currentUser) addRegistration(ev.id, name, currentUser.email);
   render();
   if (!opts.silent) {
     showToast(`You're confirmed for "${ev.title}"!`, "success");
@@ -497,7 +701,7 @@ function openJoinModal(ev) {
   clearJoinErrors();
   joinEventId.value = ev.id;
   joinEventTitle.textContent = `Joining "${ev.title}"`;
-  joinNameInput.value = getLastUsedName();
+  joinNameInput.value = currentUser ? currentUser.name : "";
   joinModal.hidden = false;
   joinNameInput.focus();
 }
@@ -514,10 +718,6 @@ joinModal.addEventListener("click", (e) => {
 
 function clearJoinErrors() {
   joinForm.querySelectorAll(".error-text").forEach((el) => (el.textContent = ""));
-}
-
-function getLastUsedName() {
-  return registrations.length ? registrations[registrations.length - 1].name : "";
 }
 
 joinForm.addEventListener("submit", (e) => {
@@ -600,6 +800,7 @@ function openPaymentModal(ev) {
   payEventId.value = ev.id;
   paySummaryTitle.textContent = ev.title;
   paySummaryAmount.textContent = "₹" + Number(ev.price || 0).toLocaleString("en-IN");
+  document.getElementById("payName").value = currentUser ? currentUser.name : "";
   paymentModal.hidden = false;
   document.getElementById("payName").focus();
 }
@@ -690,6 +891,11 @@ paymentForm.addEventListener("submit", (e) => {
    has attended (past), based on local registrations
    ========================================================= */
 function openMyEventsModal() {
+  if (!currentUser) {
+    showToast("Please log in to view your events.", "error");
+    openLoginModal();
+    return;
+  }
   renderMyEventsList();
   myEventsModal.hidden = false;
 }
@@ -715,30 +921,34 @@ function switchMyEventsTab(tab) {
 }
 
 function renderMyEventsList() {
+  if (!currentUser) return;
   const now = new Date();
   const myEvents = registrations
+    .filter((r) => r.email === currentUser.email)
     .map((r) => ({ reg: r, ev: events.find((e) => e.id === r.eventId) }))
     .filter((x) => x.ev);
 
+  // Upcoming: events the user has joined that haven't happened yet.
   const upcoming = myEvents.filter((x) => new Date(`${x.ev.date}T${x.ev.time || "00:00"}`) >= now);
+  // Past: events the user has joined that have already taken place.
   const past = myEvents.filter((x) => new Date(`${x.ev.date}T${x.ev.time || "00:00"}`) < now);
 
-  // Soonest upcoming first, most recently past first
+  // Soonest upcoming first, most recently completed first
   upcoming.sort((a, b) => new Date(`${a.ev.date}T${a.ev.time || "00:00"}`) - new Date(`${b.ev.date}T${b.ev.time || "00:00"}`));
   past.sort((a, b) => new Date(`${b.ev.date}T${b.ev.time || "00:00"}`) - new Date(`${a.ev.date}T${a.ev.time || "00:00"}`));
 
   myUpcomingList.innerHTML = upcoming.length
-    ? upcoming.map((x) => myEventRowHtml(x.ev, x.reg)).join("")
+    ? upcoming.map((x) => myEventRowHtml(x.ev, x.reg, false)).join("")
     : `<p class="my-events-empty">You're not attending any upcoming events yet.</p>`;
 
   myPastList.innerHTML = past.length
-    ? past.map((x) => myEventRowHtml(x.ev, x.reg)).join("")
-    : `<p class="my-events-empty">No past events attended yet.</p>`;
+    ? past.map((x) => myEventRowHtml(x.ev, x.reg, true)).join("")
+    : `<p class="my-events-empty">No completed events yet.</p>`;
 
   switchMyEventsTab("upcoming");
 }
 
-function myEventRowHtml(ev, reg) {
+function myEventRowHtml(ev, reg, isPast) {
   return `
     <div class="my-event-row">
       <div>
@@ -746,6 +956,7 @@ function myEventRowHtml(ev, reg) {
         <div class="mev-meta">📅 ${formatDate(ev.date)}${ev.time ? " • " + formatTime(ev.time) : ""} · 📍 ${escapeHtml(ev.location)}</div>
         <div class="mev-meta">Registered as ${escapeHtml(reg.name)}${ev.isPaid ? " · ₹" + Number(ev.price || 0).toLocaleString("en-IN") : " · Free"}</div>
       </div>
+      <span class="mev-status ${isPast ? "past" : "upcoming"}">${isPast ? "Completed" : "Attending"}</span>
     </div>
   `;
 }
@@ -881,6 +1092,8 @@ document.addEventListener("keydown", (e) => {
     if (!joinModal.hidden) closeJoinModal();
     if (!paymentModal.hidden) closePaymentModal();
     if (!myEventsModal.hidden) closeMyEventsModal();
+    if (!loginModal.hidden) closeLoginModal();
+    if (!signupModal.hidden) closeSignupModal();
   }
 });
 
@@ -891,6 +1104,9 @@ function init() {
   initTheme();
   loadEvents();
   loadRegistrations();
+  loadUsers();
+  loadSession();
+  updateAuthUI();
   render();
 }
 
