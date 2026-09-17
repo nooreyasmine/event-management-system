@@ -25,6 +25,19 @@
           ⬆️
           <input type="file" id="importInput" accept=".json" hidden />
         </label>
+
+        <!-- Logged-out state -->
+        <div id="authButtons" class="auth-buttons">
+          <button id="loginBtn" class="btn btn-ghost">Log In</button>
+          <button id="signupBtn" class="btn btn-primary">Sign Up</button>
+        </div>
+
+        <!-- Logged-in state -->
+        <div id="userMenu" class="user-menu" hidden>
+          <span class="user-badge" id="userNameDisplay">👤 User</span>
+          <button id="logoutBtn" class="btn btn-ghost">Log Out</button>
+        </div>
+
         <button id="openFormBtn" class="btn btn-primary">+ New Event</button>
       </nav>
     </div>
@@ -96,6 +109,82 @@
     </div>
 
   </main>
+
+  <!-- ===== LOGIN MODAL ===== -->
+  <div id="loginModal" class="modal-overlay" hidden>
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>Log In</h2>
+        <button class="close-btn" id="closeLoginBtn" aria-label="Close">✕</button>
+      </div>
+      <form class="modal-body" id="loginForm" novalidate>
+        <p class="demo-banner">🧪 Demo account system — stored only in this browser, not a real backend.</p>
+
+        <label class="field">
+          <span>Email <em>*</em></span>
+          <input type="email" id="loginEmail" required placeholder="you@example.com" />
+          <small class="error-text" id="err-loginEmail"></small>
+        </label>
+
+        <label class="field">
+          <span>Password <em>*</em></span>
+          <input type="password" id="loginPassword" required placeholder="••••••••" />
+          <small class="error-text" id="err-loginPassword"></small>
+        </label>
+
+        <p class="auth-switch">New here? <a href="#" id="goToSignup">Create an account</a></p>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="cancelLoginBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Log In</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== SIGN UP MODAL ===== -->
+  <div id="signupModal" class="modal-overlay" hidden>
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>Create Account</h2>
+        <button class="close-btn" id="closeSignupBtn" aria-label="Close">✕</button>
+      </div>
+      <form class="modal-body" id="signupForm" novalidate>
+        <p class="demo-banner">🧪 Demo account system — stored only in this browser, not a real backend.</p>
+
+        <label class="field">
+          <span>Full Name <em>*</em></span>
+          <input type="text" id="signupName" required maxlength="60" placeholder="e.g. Yasmine Noor" />
+          <small class="error-text" id="err-signupName"></small>
+        </label>
+
+        <label class="field">
+          <span>Email <em>*</em></span>
+          <input type="email" id="signupEmail" required placeholder="you@example.com" />
+          <small class="error-text" id="err-signupEmail"></small>
+        </label>
+
+        <label class="field">
+          <span>Password <em>*</em></span>
+          <input type="password" id="signupPassword" required placeholder="At least 6 characters" />
+          <small class="error-text" id="err-signupPassword"></small>
+        </label>
+
+        <label class="field">
+          <span>Confirm Password <em>*</em></span>
+          <input type="password" id="signupConfirmPassword" required placeholder="Re-enter password" />
+          <small class="error-text" id="err-signupConfirmPassword"></small>
+        </label>
+
+        <p class="auth-switch">Already have an account? <a href="#" id="goToLogin">Log in</a></p>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="cancelSignupBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Sign Up</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- ===== EVENT FORM MODAL ===== -->
   <div id="formModal" class="modal-overlay" hidden>
