@@ -477,6 +477,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary); }
   font-weight: 500;
 }
 .field em { color: var(--danger); font-style: normal; }
+.field-hint { color: var(--text-muted); font-weight: 400; font-size: 0.78rem; }
 
 .field input, .field select, .field textarea {
   padding: 10px 12px;
@@ -612,6 +613,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary); }
 }
 .details-row:last-of-type { border-bottom: none; }
 .details-label { color: var(--text-muted); min-width: 110px; font-weight: 500; }
+.details-row a { color: var(--primary); word-break: break-all; }
+.details-locked { color: var(--text-muted); font-style: italic; }
 
 /* ============ TOASTS ============ */
 .toast-container {
