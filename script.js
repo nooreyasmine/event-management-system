@@ -5,9 +5,11 @@
 
 const STORAGE_KEY = "eventhub_events_v1";
 const THEME_KEY = "eventhub_theme_v1";
+const REG_KEY = "eventhub_registrations_v1";
 
 /* ---------- State ---------- */
 let events = [];
+let registrations = []; // { eventId, name, joinedAt }
 let currentView = "grid";
 let deleteTargetId = null;
 
@@ -57,6 +59,22 @@ const payEventId = document.getElementById("payEventId");
 const closePaymentBtn = document.getElementById("closePaymentBtn");
 const cancelPaymentBtn = document.getElementById("cancelPaymentBtn");
 
+const joinModal = document.getElementById("joinModal");
+const joinForm = document.getElementById("joinForm");
+const joinEventTitle = document.getElementById("joinEventTitle");
+const joinEventId = document.getElementById("joinEventId");
+const joinNameInput = document.getElementById("joinName");
+const closeJoinBtn = document.getElementById("closeJoinBtn");
+const cancelJoinBtn = document.getElementById("cancelJoinBtn");
+
+const myEventsBtn = document.getElementById("myEventsBtn");
+const myEventsModal = document.getElementById("myEventsModal");
+const closeMyEventsBtn = document.getElementById("closeMyEventsBtn");
+const myUpcomingTabBtn = document.getElementById("myUpcomingTabBtn");
+const myPastTabBtn = document.getElementById("myPastTabBtn");
+const myUpcomingList = document.getElementById("myUpcomingList");
+const myPastList = document.getElementById("myPastList");
+
 const themeToggle = document.getElementById("themeToggle");
 const exportBtn = document.getElementById("exportBtn");
 const importInput = document.getElementById("importInput");
@@ -83,6 +101,36 @@ function saveEvents() {
     console.error("Failed to save events:", e);
     showToast("Couldn't save — storage may be full.", "error");
   }
+}
+
+function loadRegistrations() {
+  try {
+    const raw = localStorage.getItem(REG_KEY);
+    registrations = raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    console.error("Failed to load registrations:", e);
+    registrations = [];
+  }
+}
+
+function saveRegistrations() {
+  try {
+    localStorage.setItem(REG_KEY, JSON.stringify(registrations));
+  } catch (e) {
+    console.error("Failed to save registrations:", e);
+  }
+}
+
+function addRegistration(eventId, name) {
+  // Keep one registration per event for this browser — update name if re-joined.
+  const existing = registrations.find((r) => r.eventId === eventId);
+  if (existing) {
+    existing.name = name;
+    existing.joinedAt = new Date().toISOString();
+  } else {
+    registrations.push({ eventId, name, joinedAt: new Date().toISOString() });
+  }
+  saveRegistrations();
 }
 
 function seedEvents() {
@@ -213,6 +261,7 @@ function renderEvents(list) {
       ? Math.min(100, Math.round((Number(ev.attendees || 0) / Number(ev.maxAttendees)) * 100))
       : 0;
     const isFull = ev.maxAttendees && Number(ev.attendees || 0) >= Number(ev.maxAttendees);
+    const isRegistered = registrations.some((r) => r.eventId === ev.id);
 
     const card = document.createElement("article");
     card.className = "event-card";
@@ -243,7 +292,9 @@ function renderEvents(list) {
           <button class="btn btn-ghost btn-sm" data-action="view" data-id="${ev.id}">View</button>
           ${
             !isPast
-              ? `<button class="btn btn-primary btn-sm" data-action="rsvp" data-id="${ev.id}" ${isFull ? "disabled" : ""}>${isFull ? "Full" : ev.isPaid ? "Buy Ticket · ₹" + Number(ev.price || 0).toLocaleString("en-IN") : "Join Event"}</button>`
+              ? isRegistered
+                ? `<button class="btn btn-ghost btn-sm" disabled>✅ Attending</button>`
+                : `<button class="btn btn-primary btn-sm" data-action="rsvp" data-id="${ev.id}" ${isFull ? "disabled" : ""}>${isFull ? "Full" : ev.isPaid ? "Buy Ticket · ₹" + Number(ev.price || 0).toLocaleString("en-IN") : "Join Event"}</button>`
               : ""
           }
           <button class="btn btn-ghost btn-sm" data-action="edit" data-id="${ev.id}">Edit</button>
@@ -287,6 +338,10 @@ eventsContainer.addEventListener("click", (e) => {
 function rsvpToEvent(id) {
   const ev = events.find((x) => x.id === id);
   if (!ev) return;
+  if (registrations.some((r) => r.eventId === id)) {
+    showToast("You're already attending this event.", "success");
+    return;
+  }
   if (ev.maxAttendees && Number(ev.attendees || 0) >= Number(ev.maxAttendees)) {
     showToast("This event is already full.", "error");
     return;
@@ -295,14 +350,17 @@ function rsvpToEvent(id) {
     openPaymentModal(ev);
     return;
   }
-  confirmAttendance(ev);
+  openJoinModal(ev);
 }
 
-function confirmAttendance(ev) {
+function confirmAttendance(ev, name, opts = {}) {
   ev.attendees = Number(ev.attendees || 0) + 1;
   saveEvents();
+  if (name) addRegistration(ev.id, name);
   render();
-  showToast(`You're confirmed for "${ev.title}"!`, "success");
+  if (!opts.silent) {
+    showToast(`You're confirmed for "${ev.title}"!`, "success");
+  }
 }
 
 /* =========================================================
@@ -429,6 +487,51 @@ eventForm.addEventListener("submit", (e) => {
   saveEvents();
   closeForm();
   render();
+});
+
+/* =========================================================
+   JOIN EVENT — NAME PROMPT (for free events)
+   ========================================================= */
+function openJoinModal(ev) {
+  joinForm.reset();
+  clearJoinErrors();
+  joinEventId.value = ev.id;
+  joinEventTitle.textContent = `Joining "${ev.title}"`;
+  joinNameInput.value = getLastUsedName();
+  joinModal.hidden = false;
+  joinNameInput.focus();
+}
+
+function closeJoinModal() {
+  joinModal.hidden = true;
+}
+
+closeJoinBtn.addEventListener("click", closeJoinModal);
+cancelJoinBtn.addEventListener("click", closeJoinModal);
+joinModal.addEventListener("click", (e) => {
+  if (e.target === joinModal) closeJoinModal();
+});
+
+function clearJoinErrors() {
+  joinForm.querySelectorAll(".error-text").forEach((el) => (el.textContent = ""));
+}
+
+function getLastUsedName() {
+  return registrations.length ? registrations[registrations.length - 1].name : "";
+}
+
+joinForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  clearJoinErrors();
+  const name = joinNameInput.value.trim();
+  if (!name) {
+    document.getElementById("err-joinName").textContent = "Your name is required.";
+    return;
+  }
+  const ev = events.find((x) => x.id === joinEventId.value);
+  if (!ev) return;
+  closeJoinModal();
+  confirmAttendance(ev, name);
 });
 
 /* =========================================================
@@ -571,15 +674,81 @@ paymentForm.addEventListener("submit", (e) => {
   // Simulated processing delay — no real payment gateway is called.
   setTimeout(() => {
     const ev = events.find((x) => x.id === payEventId.value);
+    const name = document.getElementById("payName").value.trim();
     payBtn.disabled = false;
     payBtn.textContent = "Pay & Join";
     closePaymentModal();
     if (ev) {
-      confirmAttendance(ev);
+      confirmAttendance(ev, name, { silent: true });
       showToast(`Payment successful (demo) — ₹${Number(ev.price || 0).toLocaleString("en-IN")} for "${ev.title}".`, "success");
     }
   }, 900);
 });
+
+/* =========================================================
+   MY EVENTS — events this browser is attending (upcoming) or
+   has attended (past), based on local registrations
+   ========================================================= */
+function openMyEventsModal() {
+  renderMyEventsList();
+  myEventsModal.hidden = false;
+}
+
+function closeMyEventsModal() {
+  myEventsModal.hidden = true;
+}
+
+myEventsBtn.addEventListener("click", openMyEventsModal);
+closeMyEventsBtn.addEventListener("click", closeMyEventsModal);
+myEventsModal.addEventListener("click", (e) => {
+  if (e.target === myEventsModal) closeMyEventsModal();
+});
+
+myUpcomingTabBtn.addEventListener("click", () => switchMyEventsTab("upcoming"));
+myPastTabBtn.addEventListener("click", () => switchMyEventsTab("past"));
+
+function switchMyEventsTab(tab) {
+  myUpcomingTabBtn.classList.toggle("active", tab === "upcoming");
+  myPastTabBtn.classList.toggle("active", tab === "past");
+  myUpcomingList.hidden = tab !== "upcoming";
+  myPastList.hidden = tab !== "past";
+}
+
+function renderMyEventsList() {
+  const now = new Date();
+  const myEvents = registrations
+    .map((r) => ({ reg: r, ev: events.find((e) => e.id === r.eventId) }))
+    .filter((x) => x.ev);
+
+  const upcoming = myEvents.filter((x) => new Date(`${x.ev.date}T${x.ev.time || "00:00"}`) >= now);
+  const past = myEvents.filter((x) => new Date(`${x.ev.date}T${x.ev.time || "00:00"}`) < now);
+
+  // Soonest upcoming first, most recently past first
+  upcoming.sort((a, b) => new Date(`${a.ev.date}T${a.ev.time || "00:00"}`) - new Date(`${b.ev.date}T${b.ev.time || "00:00"}`));
+  past.sort((a, b) => new Date(`${b.ev.date}T${b.ev.time || "00:00"}`) - new Date(`${a.ev.date}T${a.ev.time || "00:00"}`));
+
+  myUpcomingList.innerHTML = upcoming.length
+    ? upcoming.map((x) => myEventRowHtml(x.ev, x.reg)).join("")
+    : `<p class="my-events-empty">You're not attending any upcoming events yet.</p>`;
+
+  myPastList.innerHTML = past.length
+    ? past.map((x) => myEventRowHtml(x.ev, x.reg)).join("")
+    : `<p class="my-events-empty">No past events attended yet.</p>`;
+
+  switchMyEventsTab("upcoming");
+}
+
+function myEventRowHtml(ev, reg) {
+  return `
+    <div class="my-event-row">
+      <div>
+        <div class="mev-title">${escapeHtml(ev.title)}</div>
+        <div class="mev-meta">📅 ${formatDate(ev.date)}${ev.time ? " • " + formatTime(ev.time) : ""} · 📍 ${escapeHtml(ev.location)}</div>
+        <div class="mev-meta">Registered as ${escapeHtml(reg.name)}${ev.isPaid ? " · ₹" + Number(ev.price || 0).toLocaleString("en-IN") : " · Free"}</div>
+      </div>
+    </div>
+  `;
+}
 
 /* =========================================================
    SEARCH / FILTER / SORT / VIEW
@@ -709,6 +878,9 @@ document.addEventListener("keydown", (e) => {
     if (!formModal.hidden) closeForm();
     if (!detailsModal.hidden) detailsModal.hidden = true;
     if (!confirmModal.hidden) closeConfirm();
+    if (!joinModal.hidden) closeJoinModal();
+    if (!paymentModal.hidden) closePaymentModal();
+    if (!myEventsModal.hidden) closeMyEventsModal();
   }
 });
 
@@ -718,6 +890,7 @@ document.addEventListener("keydown", (e) => {
 function init() {
   initTheme();
   loadEvents();
+  loadRegistrations();
   render();
 }
 
