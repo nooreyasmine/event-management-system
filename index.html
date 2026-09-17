@@ -18,6 +18,7 @@
         <span class="brand-name">EventHub</span>
       </div>
       <nav class="header-actions">
+        <button id="myEventsBtn" class="btn btn-ghost" title="My Events">🎟️ My Events</button>
         <button id="themeToggle" class="icon-btn" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button>
         <button id="exportBtn" class="icon-btn" title="Export events" aria-label="Export events">⬇️</button>
         <label class="icon-btn" title="Import events" aria-label="Import events">
@@ -90,7 +91,7 @@
     <div id="emptyState" class="empty-state" hidden>
       <div class="empty-icon">📭</div>
       <h3>No events found</h3>
-      <p>Try adjusting your filters, or create a new event to get started.</p>
+      <p id="emptyStateText">Try adjusting your filters, or create a new event to get started.</p>
       <button class="btn btn-primary" id="emptyCreateBtn">+ Create your first event</button>
     </div>
 
@@ -210,6 +211,29 @@
     </div>
   </div>
 
+  <!-- ===== JOIN EVENT (NAME PROMPT) MODAL ===== -->
+  <div id="joinModal" class="modal-overlay" hidden>
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>Confirm Attendance</h2>
+        <button class="close-btn" id="closeJoinBtn" aria-label="Close">✕</button>
+      </div>
+      <form class="modal-body" id="joinForm" novalidate>
+        <p class="join-event-name" id="joinEventTitle"></p>
+        <label class="field">
+          <span>Your Name <em>*</em></span>
+          <input type="text" id="joinName" required maxlength="60" placeholder="e.g. Yasmine Noor" />
+          <small class="error-text" id="err-joinName"></small>
+        </label>
+        <input type="hidden" id="joinEventId" />
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="cancelJoinBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Confirm</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- ===== DEMO PAYMENT / CHECKOUT MODAL ===== -->
   <div id="paymentModal" class="modal-overlay" hidden>
     <div class="modal modal-sm">
@@ -257,6 +281,24 @@
           <button type="submit" class="btn btn-primary" id="payNowBtn">Pay &amp; Join</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ===== MY EVENTS MODAL ===== -->
+  <div id="myEventsModal" class="modal-overlay" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <h2>My Events</h2>
+        <button class="close-btn" id="closeMyEventsBtn" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="tabs">
+          <button class="tab-btn active" id="myUpcomingTabBtn" data-tab="upcoming">Upcoming</button>
+          <button class="tab-btn" id="myPastTabBtn" data-tab="past">Past</button>
+        </div>
+        <div id="myUpcomingList" class="my-events-list"></div>
+        <div id="myPastList" class="my-events-list" hidden></div>
+      </div>
     </div>
   </div>
 
