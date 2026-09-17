@@ -250,6 +250,12 @@
         </label>
 
         <label class="field">
+          <span>Meeting Link <small class="field-hint">(for online events)</small></span>
+          <input type="url" id="meetingLink" placeholder="https://meet.google.com/… or https://zoom.us/…" />
+          <small class="error-text" id="err-meetingLink"></small>
+        </label>
+
+        <label class="field">
           <span>Description</span>
           <textarea id="description" rows="4" maxlength="600" placeholder="What's this event about?"></textarea>
         </label>
